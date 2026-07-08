@@ -5,3 +5,12 @@ version = 4
 [[package]]
 name = "catos"
 version = "0.1.0"
+dependencies = [
+ "limine",
+]
+
+[[package]]
+name = "limine"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29363c0f37e66e18575fadf7141c56ee7ea04ae5fecbeb25eff303f77af203a9"

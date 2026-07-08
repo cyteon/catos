@@ -1,6 +1,9 @@
 [build]
-target = "x86_64-catos.json"
+target = "x86_64-unknown-none"
 
-[unstable]
-json-target-spec = true
-build-std = ["core", "compiler_builtins"]
+[target.x86_64-unknown-none]
+runner = "./scripts/qemu.sh"
+rustflags = [
+    "-C", "relocation-model=static",
+    "-C", "link-arg=-Tlinker.ld",
+]
