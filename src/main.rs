@@ -36,12 +36,26 @@ pub extern "C" fn _start() -> ! {
     assert!(BASE_REVISION.is_supported());
     serial_println!("limine base rev ok");
 
+    let framebuffer = FRAMEBUFFER
+        .get_response()
+        .expect("no framebuffer")
+        .framebuffers()
+        .next()
+        .expect("no framebuffer");
+
     serial_println!(
-        "framebuffer is some?: {:?}",
-        FRAMEBUFFER.get_response().is_some()
+        "framebuffer: {}x{} @ {} bpp",
+        framebuffer.width(),
+        framebuffer.height(),
+        framebuffer.bpp()
     );
 
-    hlt()
+    drivers::console::init(&framebuffer);
+    serial_println!("console driver initialized");
+
+    println!("HIII");
+
+    hlt();
 }
 
 #[panic_handler]
