@@ -21,9 +21,4 @@ SECTIONS
 
     . = ALIGN(CONSTANT(MAXPAGESIZE));
     .text : { *(.text, .text.*) } :text
-
-    /DISCARD/ : {
-        *(.eh_frame*)
-        *(.note .note.*)
-    }
 }
