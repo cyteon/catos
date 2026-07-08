@@ -10,7 +10,7 @@ PHDRS
 
 SECTIONS
 {
-    . = 0xffffffff80000000
+    . = 0xffffffff80000000;
 
     . = ALIGN(CONSTANT(MAXPAGESIZE));
     .text : { *(.text, .text.*) } :text

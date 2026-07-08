@@ -29,4 +29,4 @@ xorriso -as mkisofs -R -r -J \
 
 ./target/limine/limine bios-install "$ISO"
 
-qemu-system-x86_64 -M q35 -m 512M -cdrom "$ISO" -serial stdio -no-reboot -no-shutdown -d int,cpu_reset -D target/qemu.log
+qemu-system-x86_64 -M q35 -m 512M -cdrom "$ISO" -serial stdio -no-reboot -no-shutdown -d int,cpu_reset -D target/qemu.log -display gtk
