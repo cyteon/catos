@@ -25,6 +25,7 @@ static _START: RequestsStartMarker = RequestsStartMarker::new();
 static _END: RequestsEndMarker = RequestsEndMarker::new();
 
 pub mod drivers;
+pub mod lib;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
