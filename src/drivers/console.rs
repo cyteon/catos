@@ -17,7 +17,17 @@ pub struct Console {
 
 unsafe impl Send for Console {}
 
+const MARGIN: usize = 8;
+
 impl Console {
+    fn cols(&self) -> usize {
+        (self.width - MARGIN * 2) / self.font.width
+    }
+
+    fn rows(&self) -> usize {
+        (self.height - MARGIN * 2) / self.font.height
+    }
+
     fn set_pixel(&mut self, x: usize, y: usize, color: u32) {
         unsafe {
             let offset = y * self.pitch + x * 4;
@@ -31,8 +41,8 @@ impl Console {
 
         let bpr = (self.font.width + 7) / 8;
 
-        let px = self.col * self.font.width;
-        let py = self.row * self.font.height;
+        let px = MARGIN + self.col * self.font.width;
+        let py = MARGIN + self.row * self.font.height;
 
         for y in 0..self.font.height {
             for x in 0..self.font.width {
@@ -54,7 +64,7 @@ impl Console {
         match c {
             '\n' => self.newline(),
             _ => {
-                if self.col > self.width / self.font.width {
+                if self.col >= self.cols() {
                     self.newline();
                 }
 
