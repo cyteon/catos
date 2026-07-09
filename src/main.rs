@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
 
 use core::panic::PanicInfo;
 
@@ -31,7 +32,7 @@ pub mod lib;
 pub extern "C" fn _start() -> ! {
     drivers::serial::init();
     println!();
-    println!("serial driver initialized");
+    println!("[OK] serial driver initialized");
 
     assert!(BASE_REVISION.is_supported());
     println!("limine base rev ok");
@@ -53,7 +54,8 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init(&framebuffer);
     println!("[OK] console driver initialized");
 
-    assert!(false);
+    lib::interrupts::init();
+    println!("[OK] interrupts initialized");
 
     hlt();
 }
