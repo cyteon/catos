@@ -1,7 +1,9 @@
 use lazy_static::lazy_static;
+use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1, layouts};
+use spin::mutex::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-use crate::drivers::pic;
+use crate::drivers::{io, pic};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -24,14 +26,6 @@ lazy_static! {
 
 pub fn init() {
     IDT.load()
-}
-
-extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
-    pic::end_of_interrupt(0);
-}
-
-extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
-    pic::end_of_interrupt(1);
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
@@ -64,4 +58,30 @@ extern "x86-interrupt" fn page_fault_handler(
     crate::println!("{:#?}\n", stack_frame);
 
     crate::hlt()
+}
+
+extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
+    pic::end_of_interrupt(0);
+}
+
+static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(Keyboard::new(
+    ScancodeSet1::new(),
+    layouts::Us104Key,
+    HandleControl::Ignore,
+));
+
+extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
+    let scancode = io::inb(0x60);
+
+    let mut keyboard = KEYBOARD.lock();
+
+    if let Ok(Some(event)) = keyboard.add_byte(scancode) {
+        if let Some(key) = keyboard.process_keyevent(event) {
+            if let pc_keyboard::DecodedKey::Unicode(char) = key {
+                crate::print!("{}", char)
+            }
+        }
+    }
+
+    pic::end_of_interrupt(1);
 }
