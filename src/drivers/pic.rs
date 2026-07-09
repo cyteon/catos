@@ -40,3 +40,11 @@ pub fn init() {
     outb(PIC1_DATA, 0);
     outb(PIC2_DATA, 0);
 }
+
+pub fn end_of_interrupt(irq: u8) {
+    if irq >= 8 {
+        outb(PIC2_COMMAND, 0x20);
+    }
+
+    outb(PIC1_COMMAND, 0x20);
+}

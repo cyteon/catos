@@ -1,6 +1,8 @@
 use lazy_static::lazy_static;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
+use crate::drivers::pic;
+
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
@@ -13,12 +15,23 @@ lazy_static! {
         }
         idt.page_fault.set_handler_fn(page_fault_handler);
 
+        idt[32].set_handler_fn(timer_handler);
+        idt[33].set_handler_fn(keyboard_handler);
+
         idt
     };
 }
 
 pub fn init() {
     IDT.load()
+}
+
+extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
+    pic::end_of_interrupt(0);
+}
+
+extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
+    pic::end_of_interrupt(1);
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
