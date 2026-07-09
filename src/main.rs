@@ -53,13 +53,15 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init(&framebuffer);
     println!("console driver initialized");
 
+    assert!(false);
+
     hlt();
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    println!("\n\x1b[31m--- PANIC ---");
-    println!("{}\n\x1b[0m", _info);
+    println!("\n--- PANIC ---");
+    println!("{}\n", _info);
 
     hlt()
 }
