@@ -1,12 +1,8 @@
 use core::fmt;
 
-const COM1: u16 = 0x3F8;
+use crate::drivers::io::outb;
 
-fn outb(port: u16, value: u8) {
-    unsafe {
-        core::arch::asm!("out dx, al", in("dx") port, in("al") value, options(nomem, nostack, preserves_flags));
-    }
-}
+const COM1: u16 = 0x3F8;
 
 pub fn init() {
     outb(COM1 + 1, 0x00);
