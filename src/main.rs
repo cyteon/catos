@@ -55,10 +55,13 @@ pub extern "C" fn _start() -> ! {
     println!("[OK] console driver initialized");
 
     lib::gdt::init();
-    println!("[OK] gdt initialized");
+    println!("[OK] gdt loaded");
 
-    lib::interrupts::init();
-    println!("[OK] interrupts initialized");
+    lib::idt::init();
+    println!("[OK] idt loaded");
+
+    x86_64::instructions::interrupts::enable();
+    println!("[OK] interrupts enabled");
 
     hlt();
 }

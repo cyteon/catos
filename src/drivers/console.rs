@@ -2,6 +2,7 @@ use core::fmt;
 
 use limine::framebuffer::Framebuffer;
 use spin::Mutex;
+use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::lib::font::{FONT, Font, parse_font};
 
@@ -126,13 +127,15 @@ impl fmt::Write for Console {
 }
 
 pub fn _print(args: fmt::Arguments) {
-    use fmt::Write;
+    without_interrupts(|| {
+        use fmt::Write;
 
-    super::serial::_print(args);
+        super::serial::_print(args);
 
-    if let Some(c) = CONSOLE.lock().as_mut() {
-        let _ = c.write_fmt(args);
-    }
+        if let Some(c) = CONSOLE.lock().as_mut() {
+            let _ = c.write_fmt(args);
+        }
+    })
 }
 
 #[macro_export]
