@@ -63,6 +63,9 @@ pub extern "C" fn _start() -> ! {
     x86_64::instructions::interrupts::enable();
     println!("[OK] interrupts enabled");
 
+    drivers::pic::init();
+    println!("[OK] pic initialized");
+
     hlt();
 }
 
