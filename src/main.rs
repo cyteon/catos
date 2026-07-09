@@ -9,6 +9,8 @@ use limine::{
     request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker},
 };
 
+use crate::drivers::console::{GREEN, RED, RESET};
+
 #[used]
 #[unsafe(link_section = ".requests")]
 static BASE_REVISION: BaseRevision = BaseRevision::new();
@@ -52,27 +54,32 @@ pub extern "C" fn _start() -> ! {
     );
 
     drivers::console::init(&framebuffer);
-    println!("[OK] console driver initialized");
+    println!("[ {}OK{} ] console driver initialized", GREEN, RESET);
 
     lib::gdt::init();
-    println!("[OK] gdt loaded");
+    println!("[ {}OK{} ] gdt loaded", GREEN, RESET);
 
     lib::idt::init();
-    println!("[OK] idt loaded");
+    println!("[ {}OK{} ] idt loaded", GREEN, RESET);
 
     x86_64::instructions::interrupts::enable();
-    println!("[OK] interrupts enabled");
+    println!("[ {}OK{} ] interrupts enabled", GREEN, RESET);
 
     drivers::pic::init();
-    println!("[OK] pic initialized");
+    println!("[ {}OK{} ] pic initialized", GREEN, RESET);
 
     hlt();
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    println!("\n--- PANIC ---");
-    println!("{}\n", _info);
+    println!(
+        "\n[ {}PANIC{} ] paniced at {}",
+        RED,
+        RESET,
+        _info.location().unwrap()
+    );
+    println!("{}{}\n", _info.message(), RESET);
 
     hlt()
 }

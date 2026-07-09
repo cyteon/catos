@@ -3,7 +3,10 @@ use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1, layouts};
 use spin::mutex::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-use crate::drivers::{io, pic};
+use crate::drivers::{
+    console::{RED, RESET},
+    io, pic,
+};
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -29,7 +32,7 @@ pub fn init() {
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
-    crate::println!("\n--- EXCEPTION: BREAKPOINT ---");
+    crate::println!("\n[ {}BREAKPOINT{} ]", RED, RESET);
     crate::println!("{:#?}\n", stack_frame);
 }
 
@@ -38,7 +41,9 @@ extern "x86-interrupt" fn double_fault_handler(
     error_code: u64,
 ) -> ! {
     crate::println!(
-        "\n--- EXCEPTION: DOUBLE FAULT (error code: {}) ---",
+        "\n[ {}DOUBLE FAULT{} ] error code: {}",
+        RED,
+        RESET,
         error_code
     );
     crate::println!("{:#?}\n", stack_frame);
@@ -52,9 +57,8 @@ extern "x86-interrupt" fn page_fault_handler(
 ) {
     use x86_64::registers::control::Cr2;
 
-    crate::println!("\n--- EXCEPTION: PAGE FAULT ---");
-    crate::println!("Accessed Address: {:?}", Cr2::read());
-    crate::println!("Error Code: {:?}", error_code);
+    crate::println!("\n[ {}PAGE FAULT{} ] at {:?}", RED, RESET, Cr2::read());
+    crate::println!("error code: {:?}", error_code);
     crate::println!("{:#?}\n", stack_frame);
 
     crate::hlt()

@@ -1,10 +1,19 @@
-use core::fmt;
+use core::{
+    fmt,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 use limine::framebuffer::Framebuffer;
 use spin::Mutex;
 use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::lib::font::{FONT, Font, parse_font};
+
+enum Ansi {
+    Normal,
+    Esc,
+    Csi(u32),
+}
 
 pub struct Console {
     addr: *mut u8,
@@ -14,9 +23,12 @@ pub struct Console {
     font: Font,
     col: usize,
     row: usize,
+    ansi: Ansi,
 }
 
 unsafe impl Send for Console {}
+
+pub static COLOR: AtomicU32 = AtomicU32::new(0xFFFFFF);
 
 const MARGIN: usize = 8;
 
@@ -49,7 +61,11 @@ impl Console {
             for x in 0..self.font.width {
                 let byte = glyph[y * bpr + x / 8];
                 let on = byte & (0x80 >> (x % 8)) != 0;
-                let color = if on { 0xFFFFFF } else { 0x000000 };
+                let color = if on {
+                    COLOR.load(Ordering::Relaxed)
+                } else {
+                    0x000000
+                };
 
                 self.set_pixel(px + x, py + y, color);
             }
@@ -90,6 +106,23 @@ impl Console {
             }
         }
     }
+
+    fn sgr(&mut self, n: u32) {
+        let color = match n {
+            0 => 0xFFFFFF,
+            30 => 0x000000,
+            31 => 0xFF0000,
+            32 => 0x00FF00,
+            33 => 0xFFFF00,
+            34 => 0x0000FF,
+            35 => 0xFF00FF,
+            36 => 0x00FFFF,
+            37 => 0xFFFFFF,
+            _ => return,
+        };
+
+        COLOR.store(color, Ordering::Relaxed);
+    }
 }
 
 pub static CONSOLE: Mutex<Option<Console>> = Mutex::new(None);
@@ -113,13 +146,38 @@ pub fn init(framebuffer: &Framebuffer) {
         font: font,
         col: 0,
         row: 0,
+        ansi: Ansi::Normal,
     });
 }
 
 impl fmt::Write for Console {
     fn write_str(&mut self, string: &str) -> fmt::Result {
         for char in string.chars() {
-            self.put_char(char);
+            match self.ansi {
+                Ansi::Normal => match char {
+                    '\x1b' => self.ansi = Ansi::Esc,
+                    _ => self.put_char(char),
+                },
+
+                Ansi::Esc => {
+                    self.ansi = if char == '[' {
+                        Ansi::Csi(0)
+                    } else {
+                        Ansi::Normal
+                    };
+                }
+
+                Ansi::Csi(n) => match char {
+                    '0'..='9' => self.ansi = Ansi::Csi(n * 10 + (char as u32 - '0' as u32)),
+                    ';' => self.ansi = Ansi::Csi(0),
+                    'm' => {
+                        self.sgr(n);
+                        self.ansi = Ansi::Normal;
+                    }
+
+                    _ => self.ansi = Ansi::Normal,
+                },
+            }
         }
 
         Ok(())
@@ -155,3 +213,8 @@ macro_rules! println {
         crate::print!("{}\n", format_args!($($arg)*));
     }}
 }
+
+pub const RED: &str = "\x1b[31m";
+pub const GREEN: &str = "\x1b[32m";
+
+pub const RESET: &str = "\x1b[0m";
