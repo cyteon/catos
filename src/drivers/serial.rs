@@ -38,21 +38,8 @@ impl fmt::Write for Serial {
     }
 }
 
-#[macro_export]
-macro_rules! serial_print {
-    ($($arg:tt)*) => {{
-        use core::fmt::Write;
-        let _ = write!(crate::drivers::serial::Serial, $($arg)*);
-    }};
-}
+pub fn _print(args: fmt::Arguments) {
+    use fmt::Write;
 
-#[macro_export]
-macro_rules! serial_println {
-    () => {{
-        crate::serial_print!("\n");
-    }};
-
-    ($($arg:tt)*) => {{
-        crate::serial_print!("{}\n", format_args!($($arg)*));
-    }};
+    let _ = Serial.write_fmt(args);
 }

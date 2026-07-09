@@ -30,11 +30,11 @@ pub mod lib;
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     drivers::serial::init();
-    serial_println!();
-    serial_println!("serial driver initialized");
+    println!();
+    println!("serial driver initialized");
 
     assert!(BASE_REVISION.is_supported());
-    serial_println!("limine base rev ok");
+    println!("limine base rev ok");
 
     let framebuffer = FRAMEBUFFER
         .get_response()
@@ -43,7 +43,7 @@ pub extern "C" fn _start() -> ! {
         .next()
         .expect("no framebuffer");
 
-    serial_println!(
+    println!(
         "framebuffer: {}x{} @ {} bpp",
         framebuffer.width(),
         framebuffer.height(),
@@ -51,17 +51,15 @@ pub extern "C" fn _start() -> ! {
     );
 
     drivers::console::init(&framebuffer);
-    serial_println!("console driver initialized");
-
-    println!("HIII");
+    println!("console driver initialized");
 
     hlt();
 }
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    serial_println!("\n\x1b[31m--- PANIC ---");
-    serial_println!("{}\n\x1b[0m", _info);
+    println!("\n\x1b[31m--- PANIC ---");
+    println!("{}\n\x1b[0m", _info);
 
     hlt()
 }

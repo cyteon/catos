@@ -55,9 +55,25 @@ impl Console {
         }
     }
 
+    fn scroll(&mut self) {
+        let line = self.font.height * self.pitch;
+        let top = MARGIN * self.pitch;
+        let band = self.rows() * self.font.height * self.pitch;
+
+        unsafe {
+            core::ptr::copy(self.addr.add(top + line), self.addr.add(top), band - line);
+            core::ptr::write_bytes(self.addr.add(top + band - line), 0, line);
+        }
+    }
+
     fn newline(&mut self) {
         self.col = 0;
         self.row += 1;
+
+        if self.row >= self.rows() {
+            self.scroll();
+            self.row -= 1;
+        }
     }
 
     pub fn put_char(&mut self, c: char) {
@@ -80,7 +96,7 @@ pub static CONSOLE: Mutex<Option<Console>> = Mutex::new(None);
 pub fn init(framebuffer: &Framebuffer) {
     let font = parse_font();
 
-    crate::serial_println!(
+    crate::println!(
         "font: {}x{} bpg={} start={}",
         font.width,
         font.height,
@@ -112,6 +128,8 @@ impl fmt::Write for Console {
 pub fn _print(args: fmt::Arguments) {
     use fmt::Write;
 
+    super::serial::_print(args);
+
     if let Some(c) = CONSOLE.lock().as_mut() {
         let _ = c.write_fmt(args);
     }
@@ -127,7 +145,7 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => {{
-        crate::serial_print!("\n");
+        crate::print!("\n");
     }};
 
     ($($arg:tt)*) => {{
