@@ -51,7 +51,7 @@ pub extern "C" fn _start() -> ! {
     );
 
     drivers::console::init(&framebuffer);
-    println!("console driver initialized");
+    println!("[OK] console driver initialized");
 
     assert!(false);
 
