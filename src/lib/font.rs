@@ -12,12 +12,23 @@ pub struct Font {
 }
 
 pub fn parse_font() -> Font {
-    assert_eq!(u32(0), 0x864a_b572); // psfu v2
+    if u32(0) == 0x864a_b572 {
+        // psf2
+        Font {
+            glyph_start: u32(8) as usize,
+            bpg: u32(20) as usize,
+            height: u32(24) as usize,
+            width: u32(28) as usize,
+        }
+    } else {
+        // psf1
+        let charsize = FONT[3] as usize;
 
-    Font {
-        glyph_start: u32(8) as usize,
-        bpg: u32(20) as usize,
-        height: u32(24) as usize,
-        width: u32(28) as usize,
+        Font {
+            glyph_start: 4,
+            bpg: charsize,
+            height: charsize,
+            width: 8,
+        }
     }
 }
