@@ -54,6 +54,9 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init(&framebuffer);
     println!("[OK] console driver initialized");
 
+    lib::gdt::init();
+    println!("[OK] gdt initialized");
+
     lib::interrupts::init();
     println!("[OK] interrupts initialized");
 
