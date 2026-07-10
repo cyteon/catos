@@ -11,7 +11,8 @@ use limine::{
     BaseRevision,
     memory_map::EntryType,
     request::{
-        FramebufferRequest, HhdmRequest, MemoryMapRequest, RequestsEndMarker, RequestsStartMarker,
+        FramebufferRequest, HhdmRequest, MemoryMapRequest, ModuleRequest, RequestsEndMarker,
+        RequestsStartMarker,
     },
 };
 
@@ -35,6 +36,10 @@ static HHDM: HhdmRequest = HhdmRequest::new();
 #[used]
 #[unsafe(link_section = ".requests")]
 static MEMORY_MAP: MemoryMapRequest = MemoryMapRequest::new();
+
+#[used]
+#[unsafe(link_section = ".requests")]
+static MODULES: ModuleRequest = ModuleRequest::new();
 
 #[used]
 #[unsafe(link_section = ".requests_start_marker")]
@@ -112,6 +117,8 @@ pub extern "C" fn _start() -> ! {
 
 #[unsafe(no_mangle)]
 extern "C" fn main() -> ! {
+    println!("[ {}OK{} ] moved from _start to main", GREEN, RESET);
+
     lib::gdt::init();
     println!("[ {}OK{} ] gdt loaded", GREEN, RESET);
 
@@ -126,6 +133,19 @@ extern "C" fn main() -> ! {
 
     x86_64::instructions::interrupts::enable();
     println!("[ {}OK{} ] interrupts enabled", GREEN, RESET);
+
+    let module = MODULES
+        .get_response()
+        .expect("no modules")
+        .modules()
+        .first()
+        .expect("no initrd");
+
+    let initrd: &'static [u8] =
+        unsafe { core::slice::from_raw_parts(module.addr(), module.size() as usize) };
+
+    lib::initrd::init(initrd);
+    println!("[ {}OK{} ] initrd loaded", GREEN, RESET);
 
     println!("[ {}OK{} ] boot complete", GREEN, RESET);
     println!("[ {}OK{} ] starting shell\n", GREEN, RESET);

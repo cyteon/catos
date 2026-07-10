@@ -20,6 +20,8 @@ cp target/limine/limine-bios.sys \
    target/limine/limine-uefi-cd.bin "$ISO_ROOT/boot/limine/"
 cp target/limine/BOOTX64.EFI "$ISO_ROOT/EFI/BOOT/"
 
+tar --format=ustar -cf "$ISO_ROOT/boot/initrd.tar" -C initrd .
+
 xorriso -as mkisofs -R -r -J \
     -b boot/limine/limine-bios-cd.bin \
     -no-emul-boot -boot-load-size 4 -boot-info-table \
