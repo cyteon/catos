@@ -10,7 +10,7 @@ pub fn get() -> Option<&'static [u8]> {
     INITRD.get().copied()
 }
 
-pub struct File<'a> {
+pub struct InitrdFile<'a> {
     pub name: &'a str,
     pub data: &'a [u8],
 }
@@ -28,7 +28,7 @@ fn parse_octal(field: &[u8]) -> usize {
     value
 }
 
-pub fn files(tar: &[u8]) -> impl Iterator<Item = File<'_>> {
+pub fn files(tar: &[u8]) -> impl Iterator<Item = InitrdFile<'_>> {
     let mut offset = 0;
 
     core::iter::from_fn(move || {
@@ -55,7 +55,7 @@ pub fn files(tar: &[u8]) -> impl Iterator<Item = File<'_>> {
             offset = data_start + size.div_ceil(512) * 512;
 
             if typeflag == b'0' || typeflag == 0 {
-                return Some(File {
+                return Some(InitrdFile {
                     name,
                     data: &tar[data_start..data_start + size],
                 });
@@ -64,6 +64,6 @@ pub fn files(tar: &[u8]) -> impl Iterator<Item = File<'_>> {
     })
 }
 
-pub fn find<'a>(tar: &'a [u8], name: &str) -> Option<File<'a>> {
+pub fn find<'a>(tar: &'a [u8], name: &str) -> Option<InitrdFile<'a>> {
     files(tar).find(|file| file.name == name)
 }

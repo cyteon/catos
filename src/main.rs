@@ -147,8 +147,8 @@ extern "C" fn main() -> ! {
     let initrd: &'static [u8] =
         unsafe { core::slice::from_raw_parts(module.addr(), module.size() as usize) };
 
-    lib::initrd::init(initrd);
-    println!("[ {}OK{} ] initrd loaded", GREEN, RESET);
+    lib::fs::init(initrd);
+    println!("[ {}OK{} ] fs initialized", GREEN, RESET);
 
     println!("[ {}OK{} ] boot complete", GREEN, RESET);
     println!("[ {}OK{} ] starting shell\n", GREEN, RESET);

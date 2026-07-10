@@ -8,7 +8,7 @@ use crate::{
         console::{RED, RESET},
         pit::TICK_HZ,
     },
-    lib::initrd::{self, INITRD},
+    lib::{fs, initrd},
     print, println,
 };
 
@@ -75,26 +75,17 @@ pub fn run_command(line: &str) {
         },
 
         "ls" => {
-            if let Some(tar) = initrd::get() {
-                for file in initrd::files(tar) {
-                    crate::println!("{:>8} {}", file.data.len(), file.name);
-                }
-            } else {
-                crate::println!("{}no initrd found{}", RED, RESET);
+            for file in fs::list() {
+                crate::println!("{:>8} {}", file.0, file.1);
             }
         }
 
         "cat" => {
-            if let Some(tar) = initrd::get() {
-                match initrd::find(tar, &rest) {
-                    Some(file) => match core::str::from_utf8(file.data) {
-                        Ok(text) => crate::println!("{}", text),
-                        Err(_) => crate::println!("{}file is not valid UTF-8{}", RED, RESET),
-                    },
-                    None => crate::println!("{}file not found: {}{}", RED, rest, RESET),
-                }
+            if let Some(file) = fs::read(&rest) {
+                let content = core::str::from_utf8(&file).unwrap_or("<invalid utf-8>");
+                println!("{}", content);
             } else {
-                crate::println!("{}no initrd found{}", RED, RESET);
+                println!("{}file not found: {}{}", RED, rest, RESET);
             }
         }
 
