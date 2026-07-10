@@ -1,4 +1,3 @@
-use spin::Mutex;
 use x86_64::instructions::interrupts::without_interrupts;
 
 const BUFFER_SIZE: usize = 256;

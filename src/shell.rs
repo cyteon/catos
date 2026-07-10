@@ -27,6 +27,7 @@ pub fn run_command(line: &str) {
             println!("  int3        - trigger a breakpoint exception");
             println!("  initrd      - show initrd debug info");
             println!("  ls          - list files in the initrd");
+            println!("  cat <file>  - print the contents of <file> in the initrd");
         }
 
         "echo" => {
