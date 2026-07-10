@@ -40,3 +40,24 @@ pub fn read(name: &str) -> Option<Vec<u8>> {
         .find(|file| file.name == name)
         .map(|file| file.data.clone())
 }
+
+pub fn write(name: &str, data: &[u8]) {
+    let mut fs = FS.lock();
+
+    if let Some(file) = fs.iter_mut().find(|file| file.name == name) {
+        file.data = data.to_vec();
+    } else {
+        fs.push(RamFile {
+            name: name.to_string(),
+            data: data.to_vec(),
+        });
+    }
+}
+
+pub fn remove(name: &str) {
+    let mut fs = FS.lock();
+
+    if let Some(pos) = fs.iter().position(|file| file.name == name) {
+        fs.remove(pos);
+    }
+}
