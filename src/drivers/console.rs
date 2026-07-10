@@ -101,6 +101,8 @@ impl Console {
             return;
         }
 
+        self.draw_cursor(false);
+
         self.col -= 1;
         self.draw_char(' ');
     }

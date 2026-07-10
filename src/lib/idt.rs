@@ -7,7 +7,7 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, Pag
 
 use crate::drivers::{
     console::{RED, RESET},
-    io, pic,
+    io, pic, serial,
 };
 
 lazy_static! {
@@ -24,6 +24,7 @@ lazy_static! {
 
         idt[32].set_handler_fn(timer_handler);
         idt[33].set_handler_fn(keyboard_handler);
+        idt[36].set_handler_fn(serial_in_handler);
 
         idt
     };
@@ -91,4 +92,18 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     }
 
     pic::end_of_interrupt(1);
+}
+
+extern "x86-interrupt" fn serial_in_handler(_frame: InterruptStackFrame) {
+    while io::inb(serial::COM1 + 5) & 1 != 0 {
+        let byte = io::inb(serial::COM1);
+
+        match byte {
+            b'\r' => super::keys::push_key('\n'),
+            b'\x7f' => super::keys::push_key('\x08'),
+            _ => super::keys::push_key(byte as char),
+        }
+    }
+
+    pic::end_of_interrupt(4);
 }

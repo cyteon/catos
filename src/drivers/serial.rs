@@ -2,7 +2,7 @@ use core::fmt;
 
 use crate::drivers::io::outb;
 
-const COM1: u16 = 0x3F8;
+pub const COM1: u16 = 0x3F8;
 
 pub fn init() {
     outb(COM1 + 1, 0x00);
@@ -10,6 +10,7 @@ pub fn init() {
     outb(COM1 + 0, 0x03);
     outb(COM1 + 1, 0x00);
     outb(COM1 + 3, 0x03);
+    outb(COM1 + 1, 0x01);
     outb(COM1 + 2, 0xC7);
     outb(COM1 + 4, 0x0B);
 }

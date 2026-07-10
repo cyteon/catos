@@ -178,7 +178,7 @@ extern "C" fn main() -> ! {
 
                 '\x08' => {
                     if line.pop().is_some() {
-                        print!("\x08");
+                        print!("\x08 \x08");
                     }
                 }
 

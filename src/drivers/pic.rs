@@ -37,8 +37,8 @@ pub fn init() {
     outb(PIC2_DATA, 0x01);
     io_wait();
 
-    outb(PIC1_DATA, 0);
-    outb(PIC2_DATA, 0);
+    outb(PIC1_DATA, 0b1110_1100);
+    outb(PIC2_DATA, 0xFF);
 }
 
 pub fn end_of_interrupt(irq: u8) {
