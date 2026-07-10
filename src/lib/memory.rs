@@ -74,9 +74,36 @@ pub fn init(hhdm_offset: u64, entries: &'static [&'static Entry]) {
         }
     }
 
+    map_kernel_stack(&mut mapper, &mut frame_allocator);
+
     unsafe {
         ALLOCATOR
             .lock()
             .init(HEAP_START as *mut u8, HEAP_SIZE as usize);
+    }
+}
+
+pub const STACK_GUARD: u64 = 0xffff_a000_0000_0000;
+pub const STACK_BOTTOM: u64 = STACK_GUARD + 4096;
+pub const STACK_PAGES: u64 = 16;
+pub const STACK_TOP: u64 = STACK_BOTTOM + STACK_PAGES * 4096;
+
+pub fn map_kernel_stack(
+    mapper: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut BootFrameAllocator,
+) {
+    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE;
+    let start: Page<Size4KiB> = Page::containing_address(VirtAddr::new(STACK_BOTTOM));
+    let end: Page<Size4KiB> = Page::containing_address(VirtAddr::new(STACK_TOP - 1));
+
+    for page in Page::range_inclusive(start, end) {
+        let frame = frame_allocator.allocate_frame().expect("no more frames");
+
+        unsafe {
+            mapper
+                .map_to(page, frame, flags, frame_allocator)
+                .expect("stack map failed")
+                .flush();
+        }
     }
 }

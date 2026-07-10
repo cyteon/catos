@@ -17,7 +17,7 @@ use limine::{
 
 use crate::{
     drivers::console::{GREEN, RED, RESET},
-    lib::keys::pop_key,
+    lib::{keys::pop_key, memory::STACK_TOP},
 };
 
 #[used]
@@ -76,18 +76,6 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init(&framebuffer);
     println!("[ {}OK{} ] console driver initialized", GREEN, RESET);
 
-    lib::gdt::init();
-    println!("[ {}OK{} ] gdt loaded", GREEN, RESET);
-
-    lib::idt::init();
-    println!("[ {}OK{} ] idt loaded", GREEN, RESET);
-
-    x86_64::instructions::interrupts::enable();
-    println!("[ {}OK{} ] interrupts enabled", GREEN, RESET);
-
-    drivers::pic::init();
-    println!("[ {}OK{} ] pic initialized", GREEN, RESET);
-
     let hhdm = HHDM.get_response().expect("no hhdm").offset();
     let memory_map = MEMORY_MAP.get_response().expect("no memory map");
 
@@ -110,6 +98,31 @@ pub extern "C" fn _start() -> ! {
     // test if allocation works
     let test: Vec<i64> = (0..10000).collect();
     drop(test);
+
+    unsafe {
+        core::arch::asm!(
+            "mov rsp, {stack}",
+            "jmp {main}",
+            stack = in(reg) STACK_TOP,
+            main = sym main,
+            options(noreturn)
+        );
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn main() -> ! {
+    lib::gdt::init();
+    println!("[ {}OK{} ] gdt loaded", GREEN, RESET);
+
+    lib::idt::init();
+    println!("[ {}OK{} ] idt loaded", GREEN, RESET);
+
+    drivers::pic::init();
+    println!("[ {}OK{} ] pic initialized", GREEN, RESET);
+
+    x86_64::instructions::interrupts::enable();
+    println!("[ {}OK{} ] interrupts enabled", GREEN, RESET);
 
     println!("[ {}OK{} ] boot complete", GREEN, RESET);
     println!("[ {}OK{} ] starting shell\n", GREEN, RESET);
