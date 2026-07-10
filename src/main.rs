@@ -2,11 +2,16 @@
 #![no_main]
 #![feature(abi_x86_interrupt)]
 
-use core::panic::PanicInfo;
+extern crate alloc;
+
+use core::{panic::PanicInfo, sync::atomic::AtomicU64};
 
 use limine::{
     BaseRevision,
-    request::{FramebufferRequest, RequestsEndMarker, RequestsStartMarker},
+    memory_map::EntryType,
+    request::{
+        FramebufferRequest, HhdmRequest, MemoryMapRequest, RequestsEndMarker, RequestsStartMarker,
+    },
 };
 
 use crate::drivers::console::{GREEN, RED, RESET};
@@ -20,6 +25,14 @@ static BASE_REVISION: BaseRevision = BaseRevision::new();
 static FRAMEBUFFER: FramebufferRequest = FramebufferRequest::new();
 
 #[used]
+#[unsafe(link_section = ".requests")]
+static HHDM: HhdmRequest = HhdmRequest::new();
+
+#[used]
+#[unsafe(link_section = ".requests")]
+static MEMORY_MAP: MemoryMapRequest = MemoryMapRequest::new();
+
+#[used]
 #[unsafe(link_section = ".requests_start_marker")]
 static _START: RequestsStartMarker = RequestsStartMarker::new();
 
@@ -29,6 +42,8 @@ static _END: RequestsEndMarker = RequestsEndMarker::new();
 
 pub mod drivers;
 pub mod lib;
+
+pub static TICKS: AtomicU64 = AtomicU64::new(0);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
@@ -67,6 +82,27 @@ pub extern "C" fn _start() -> ! {
 
     drivers::pic::init();
     println!("[ {}OK{} ] pic initialized", GREEN, RESET);
+
+    let hhdm = HHDM.get_response().expect("no hhdm").offset();
+    let memory_map = MEMORY_MAP.get_response().expect("no memory map");
+
+    lib::memory::init(hhdm, memory_map.entries());
+    println!("[ {}OK{} ] heap initialized", GREEN, RESET);
+
+    let mut total_usable_memory = 0;
+
+    for entry in memory_map.entries() {
+        if entry.entry_type == EntryType::USABLE {
+            total_usable_memory += entry.length;
+        }
+    }
+
+    println!(
+        "total usable memory: {} MiB",
+        total_usable_memory / 1024 / 1024,
+    );
+
+    let a: alloc::vec::Vec<i64> = (0..1000).collect();
 
     hlt();
 }

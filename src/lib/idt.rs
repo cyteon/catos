@@ -1,3 +1,5 @@
+use core::sync::atomic::Ordering;
+
 use lazy_static::lazy_static;
 use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1, layouts};
 use spin::mutex::Mutex;
@@ -65,6 +67,7 @@ extern "x86-interrupt" fn page_fault_handler(
 }
 
 extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
+    crate::TICKS.fetch_add(1, Ordering::Relaxed);
     pic::end_of_interrupt(0);
 }
 
