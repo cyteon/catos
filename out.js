@@ -76,11 +76,6 @@ if (ENVIRONMENT_IS_NODE) {
   thisProgram = process.argv[1].replace(/\\/g, "/");
  }
  arguments_ = process.argv.slice(2);
- process.on("uncaughtException", ex => {
-  if (ex !== "unwind" && !(ex instanceof ExitStatus) && !(ex.context instanceof ExitStatus)) {
-   throw ex;
-  }
- });
  quit_ = (status, toThrow) => {
   process.exitCode = status;
   throw toThrow;
@@ -5980,7 +5975,7 @@ var sigToWasmTypes = sig => {
 
 var Asyncify = {
  instrumentWasmImports(imports) {
-  var importPattern = /^(ffi_call_js|invoke_.*|__asyncjs__.*)$/;
+  var importPattern = /^(invoke_.*|__asyncjs__.*)$/;
   for (var x in imports) {
    (function(x) {
     var original = imports[x];
@@ -7549,9 +7544,9 @@ var _asyncify_start_rewind = a0 => (_asyncify_start_rewind = wasmExports["asynci
 
 var _asyncify_stop_rewind = () => (_asyncify_stop_rewind = wasmExports["asyncify_stop_rewind"])();
 
-var ___start_em_js = Module["___start_em_js"] = 7863192;
+var ___start_em_js = Module["___start_em_js"] = 7874824;
 
-var ___stop_em_js = Module["___stop_em_js"] = 7875897;
+var ___stop_em_js = Module["___stop_em_js"] = 7887529;
 
 function invoke_ii(index, a1) {
  var sp = stackSave();
@@ -7591,6 +7586,17 @@ function invoke_vi(index, a1) {
  var sp = stackSave();
  try {
   dynCall_vi(index, a1);
+ } catch (e) {
+  stackRestore(sp);
+  if (e !== e + 0) throw e;
+  _setThrew(1, 0);
+ }
+}
+
+function invoke_viiiii(index, a1, a2, a3, a4, a5) {
+ var sp = stackSave();
+ try {
+  dynCall_viiiii(index, a1, a2, a3, a4, a5);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7725,17 +7731,6 @@ function invoke_viiiiii(index, a1, a2, a3, a4, a5, a6) {
  var sp = stackSave();
  try {
   dynCall_viiiiii(index, a1, a2, a3, a4, a5, a6);
- } catch (e) {
-  stackRestore(sp);
-  if (e !== e + 0) throw e;
-  _setThrew(1, 0);
- }
-}
-
-function invoke_viiiii(index, a1, a2, a3, a4, a5) {
- var sp = stackSave();
- try {
-  dynCall_viiiii(index, a1, a2, a3, a4, a5);
  } catch (e) {
   stackRestore(sp);
   if (e !== e + 0) throw e;
@@ -7913,6 +7908,8 @@ Module["FS_createDataFile"] = FS.createDataFile;
 Module["FS_unlink"] = FS.unlink;
 
 Module["TTY"] = TTY;
+
+Module["PThread"] = PThread;
 
 var calledRun;
 
