@@ -159,12 +159,12 @@ extern "C" fn main() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    println!(
-        "\n[ {}PANIC{} ] paniced at {}",
-        RED,
-        RESET,
-        _info.location().unwrap()
-    );
+    if let Some(location) = _info.location() {
+        println!("\n[ {}PANIC{} ] panicked at {}", RED, RESET, location);
+    } else {
+        println!("\n[ {}PANIC{} ]", RED, RESET);
+    }
+
     println!("{}{}\n", _info.message(), RESET);
 
     hlt()
