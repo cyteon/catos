@@ -24,6 +24,7 @@ pub struct Console {
     col: usize,
     row: usize,
     ansi: Ansi,
+    cursor_visible: bool,
 }
 
 unsafe impl Send for Console {}
@@ -84,6 +85,8 @@ impl Console {
     }
 
     fn newline(&mut self) {
+        self.draw_cursor(false);
+
         self.col = 0;
         self.row += 1;
 
@@ -135,6 +138,22 @@ impl Console {
 
         COLOR.store(color, Ordering::Relaxed);
     }
+
+    fn draw_cursor(&mut self, on: bool) {
+        let px = MARGIN + self.col * self.font.width;
+        let py = MARGIN + self.row * self.font.height;
+        let color = if on {
+            COLOR.load(Ordering::Relaxed)
+        } else {
+            0x000000
+        };
+
+        for y in 0..self.font.height {
+            for x in 0..self.font.width {
+                self.set_pixel(px + x, py + y, color);
+            }
+        }
+    }
 }
 
 pub static CONSOLE: Mutex<Option<Console>> = Mutex::new(None);
@@ -159,6 +178,7 @@ pub fn init(framebuffer: &Framebuffer) {
         col: 0,
         row: 0,
         ansi: Ansi::Normal,
+        cursor_visible: false,
     });
 }
 
@@ -194,6 +214,15 @@ impl fmt::Write for Console {
 
         Ok(())
     }
+}
+
+pub fn tick_cursor() {
+    without_interrupts(|| {
+        if let Some(c) = CONSOLE.lock().as_mut() {
+            c.cursor_visible = !c.cursor_visible;
+            c.draw_cursor(c.cursor_visible);
+        }
+    })
 }
 
 pub fn _print(args: fmt::Arguments) {

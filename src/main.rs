@@ -4,7 +4,10 @@
 
 extern crate alloc;
 
-use core::{panic::PanicInfo, sync::atomic::AtomicU64};
+use core::{
+    panic::PanicInfo,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use alloc::{string::String, vec::Vec};
 use limine::{
@@ -117,7 +120,7 @@ pub extern "C" fn _start() -> ! {
 
 #[unsafe(no_mangle)]
 extern "C" fn main() -> ! {
-    println!("[ {}OK{} ] moved from _start to main", GREEN, RESET);
+    println!("[ {}OK{} ] moved from _start into main", GREEN, RESET);
 
     lib::gdt::init();
     println!("[ {}OK{} ] gdt loaded", GREEN, RESET);
@@ -153,8 +156,16 @@ extern "C" fn main() -> ! {
     let mut line = String::new();
     print!("catos> ");
 
+    let mut last_blink = 0;
+
     loop {
         x86_64::instructions::hlt();
+
+        let ticks = TICKS.load(Ordering::Relaxed);
+        if ticks / ((drivers::pit::TICK_HZ as u64) / 2) != last_blink {
+            last_blink = ticks / ((drivers::pit::TICK_HZ as u64) / 2);
+            drivers::console::tick_cursor();
+        }
 
         while let Some(char) = pop_key() {
             match char {
