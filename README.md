@@ -2,6 +2,9 @@
 
 A small AMD64 kernel written in Rust.
 
+<img width="554" height="561" alt="image" src="https://github.com/user-attachments/assets/2f9f98de-bc46-4a69-ab66-2b6239f1875f" />
+
+
 ## Building
 
 ### From releases
