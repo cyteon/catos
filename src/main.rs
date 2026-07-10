@@ -46,6 +46,7 @@ static _END: RequestsEndMarker = RequestsEndMarker::new();
 
 pub mod drivers;
 pub mod lib;
+mod shell;
 
 pub static TICKS: AtomicU64 = AtomicU64::new(0);
 
@@ -123,6 +124,8 @@ pub extern "C" fn _start() -> ! {
             match char {
                 '\n' => {
                     println!();
+                    shell::run_command(&line);
+                    line.clear();
                     print!("catos> ");
                 }
 
