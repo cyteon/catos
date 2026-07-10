@@ -121,6 +121,9 @@ extern "C" fn main() -> ! {
     drivers::pic::init();
     println!("[ {}OK{} ] pic initialized", GREEN, RESET);
 
+    drivers::pit::init();
+    println!("[ {}OK{} ] pit initialized", GREEN, RESET);
+
     x86_64::instructions::interrupts::enable();
     println!("[ {}OK{} ] interrupts enabled", GREEN, RESET);
 

@@ -4,7 +4,10 @@ use alloc::vec::Vec;
 
 use crate::{
     TICKS,
-    drivers::console::{RED, RESET},
+    drivers::{
+        console::{RED, RESET},
+        pit::TICK_HZ,
+    },
     println,
 };
 
@@ -29,9 +32,9 @@ pub fn run_command(line: &str) {
 
         "uptime" => {
             let ticks = TICKS.load(Ordering::Relaxed);
-            let seconds = ticks as f64 / 18.2065;
-            let minutes = seconds / 60.0;
-            let hours = minutes / 60.0;
+            let seconds = ticks / TICK_HZ as u64;
+            let minutes = seconds / 60;
+            let hours = minutes / 60;
 
             println!(
                 "up for {}h {}m {}s",
