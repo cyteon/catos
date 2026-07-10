@@ -93,9 +93,21 @@ impl Console {
         }
     }
 
+    fn backspace(&mut self) {
+        if self.col == 0 {
+            return;
+        }
+
+        self.col -= 1;
+        self.draw_char(' ');
+    }
+
     pub fn put_char(&mut self, c: char) {
         match c {
             '\n' => self.newline(),
+
+            '\x08' => self.backspace(),
+
             _ => {
                 if self.col >= self.cols() {
                     self.newline();

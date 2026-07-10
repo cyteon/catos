@@ -6,6 +6,7 @@ extern crate alloc;
 
 use core::{panic::PanicInfo, sync::atomic::AtomicU64};
 
+use alloc::{string::String, vec::Vec};
 use limine::{
     BaseRevision,
     memory_map::EntryType,
@@ -14,7 +15,10 @@ use limine::{
     },
 };
 
-use crate::drivers::console::{GREEN, RED, RESET};
+use crate::{
+    drivers::console::{GREEN, RED, RESET},
+    lib::keys::pop_key,
+};
 
 #[used]
 #[unsafe(link_section = ".requests")]
@@ -102,9 +106,39 @@ pub extern "C" fn _start() -> ! {
         total_usable_memory / 1024 / 1024,
     );
 
-    let a: alloc::vec::Vec<i64> = (0..1000).collect();
+    // test if allocation works
+    let test: Vec<i64> = (0..10000).collect();
+    drop(test);
 
-    hlt();
+    println!("[ {}OK{} ] boot complete", GREEN, RESET);
+    println!("[ {}OK{} ] starting shell\n", GREEN, RESET);
+
+    let mut line = String::new();
+    print!("catos> ");
+
+    loop {
+        x86_64::instructions::hlt();
+
+        while let Some(char) = pop_key() {
+            match char {
+                '\n' => {
+                    println!();
+                    print!("catos> ");
+                }
+
+                '\x08' => {
+                    if line.pop().is_some() {
+                        print!("\x08");
+                    }
+                }
+
+                c => {
+                    line.push(c);
+                    print!("{}", c);
+                }
+            }
+        }
+    }
 }
 
 #[panic_handler]
@@ -122,6 +156,6 @@ fn panic(_info: &PanicInfo) -> ! {
 
 fn hlt() -> ! {
     loop {
-        unsafe { core::arch::asm!("hlt") }
+        x86_64::instructions::hlt();
     }
 }

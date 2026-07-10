@@ -85,7 +85,7 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     if let Ok(Some(event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(event) {
             if let pc_keyboard::DecodedKey::Unicode(char) = key {
-                crate::print!("{}", char)
+                super::keys::push_key(char);
             }
         }
     }
