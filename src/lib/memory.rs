@@ -16,7 +16,7 @@ use x86_64::{
 static ALLOCATOR: LockedHeap = LockedHeap::empty();
 
 pub const HEAP_START: u64 = 0xffff_9000_0000_0000;
-pub const HEAP_SIZE: u64 = 1024 * 1024;
+pub const HEAP_SIZE: u64 = 32 * 1024 * 1024;
 pub const STACK_GUARD: u64 = 0xffff_a000_0000_0000;
 pub const STACK_BOTTOM: u64 = STACK_GUARD + 4096;
 pub const STACK_PAGES: u64 = 16;

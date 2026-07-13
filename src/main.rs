@@ -81,6 +81,8 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init(&framebuffer);
     println!("[ {}OK{} ] console driver initialized", GREEN, RESET);
 
+    println!("[ {}OK{} ] initalizing heap", GREEN, RESET);
+
     let hhdm = HHDM.get_response().expect("no hhdm").offset();
     let memory_map = MEMORY_MAP.get_response().expect("no memory map");
 
