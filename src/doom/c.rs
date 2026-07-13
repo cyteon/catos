@@ -121,7 +121,7 @@ pub unsafe extern "C" fn strcmp(a: *const u8, b: *const u8) -> i32 {
             let ac = *a.add(i);
             let bc = *b.add(i);
 
-            if ac != bc {
+            if ac != bc || ac == 0 {
                 return ac as i32 - bc as i32;
             }
 
@@ -137,7 +137,7 @@ pub unsafe extern "C" fn strncmp(a: *const u8, b: *const u8, n: usize) -> i32 {
             let ac = *a.add(i);
             let bc = *b.add(i);
 
-            if ac != bc {
+            if ac != bc || ac == 0 {
                 return ac as i32 - bc as i32;
             }
 
@@ -167,7 +167,7 @@ pub extern "C" fn strcasecmp(a: *const u8, b: *const u8) -> i32 {
             let ac = lower(*a.add(i));
             let bc = lower(*b.add(i));
 
-            if ac != bc {
+            if ac != bc || ac == 0 {
                 return ac as i32 - bc as i32;
             }
 
@@ -183,7 +183,7 @@ pub extern "C" fn strncasecmp(a: *const u8, b: *const u8, n: usize) -> i32 {
             let ac = lower(*a.add(i));
             let bc = lower(*b.add(i));
 
-            if ac != bc {
+            if ac != bc || ac == 0 {
                 return ac as i32 - bc as i32;
             }
 
@@ -480,6 +480,8 @@ pub unsafe extern "C" fn fopen(filename: *const u8, mode: *const u8) -> *mut FIL
             None => return core::ptr::null_mut(),
         };
 
+        crate::println!("fopen {}: {} bytes", name, data.len());
+
         Box::into_raw(Box::new(FILE {
             name: name.to_string(),
             data,
@@ -579,6 +581,8 @@ pub unsafe extern "C" fn fclose(file: *mut FILE) -> i32 {
         }
 
         let file = Box::from_raw(file);
+
+        crate::println!("fclose {}", file.name);
 
         if file.write {
             crate::lib::fs::write(&file.name, &file.data);

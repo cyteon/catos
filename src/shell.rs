@@ -141,7 +141,7 @@ pub fn run_command(line: &str) {
 
         "doom" => {
             println!("launching doom...");
-            crate::doom::run();
+            tasks::spawn_task("doom", crate::doom::run);
         }
 
         "echo" => {
@@ -253,8 +253,4 @@ extern "C" fn sleep_test() {
     println!("task sleeping");
     tasks::sleep(5 * 1000);
     println!("task woke up");
-}
-
-unsafe extern "C" {
-    fn c_test() -> i32;
 }
