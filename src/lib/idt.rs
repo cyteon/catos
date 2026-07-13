@@ -78,7 +78,7 @@ extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
 static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(Keyboard::new(
     ScancodeSet1::new(),
     layouts::Us104Key,
-    HandleControl::Ignore,
+    HandleControl::MapLettersToUnicode,
 ));
 
 extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {

@@ -57,6 +57,12 @@ pub fn shell_loop() -> ! {
                         }
                     }
 
+                    '\x03' => {
+                        line.clear();
+                        println!("^C");
+                        print!("catos> ");
+                    }
+
                     c => {
                         line.push(c);
                         print!("{}", c);
