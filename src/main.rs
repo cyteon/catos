@@ -150,6 +150,8 @@ extern "C" fn main() -> ! {
     println!("[ {}OK{} ] boot complete", GREEN, RESET);
     println!("[ {}OK{} ] starting shell\n", GREEN, RESET);
 
+    lib::tasks::init();
+
     shell::shell_loop();
 }
 
