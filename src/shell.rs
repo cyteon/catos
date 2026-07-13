@@ -1,16 +1,111 @@
 use core::sync::atomic::Ordering;
 
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
+use spin::mutex::Mutex;
 
 use crate::{
     TICKS,
     drivers::{
+        self,
         console::{RED, RESET},
         pit::TICK_HZ,
     },
-    lib::{fs, initrd},
+    lib::{
+        fs, initrd,
+        keys::{Key, pop_key},
+    },
     print, println,
 };
+
+static HISTORY: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+pub fn shell_loop() -> ! {
+    let mut last_blink = 0;
+    let mut history_index = 0;
+
+    let mut line = String::new();
+    print!("catos> ");
+
+    loop {
+        x86_64::instructions::hlt();
+
+        let ticks = TICKS.load(Ordering::Relaxed);
+        if ticks / ((drivers::pit::TICK_HZ as u64) / 2) != last_blink {
+            last_blink = ticks / ((drivers::pit::TICK_HZ as u64) / 2);
+            drivers::console::tick_cursor();
+        }
+
+        while let Some(key) = pop_key() {
+            match key {
+                Key::Char(c) => match c {
+                    '\n' => {
+                        println!();
+                        run_command(&line);
+
+                        let mut history = HISTORY.lock();
+                        history.push(line.clone());
+
+                        history_index = history.len();
+
+                        line.clear();
+                        print!("catos> ");
+                    }
+
+                    '\x08' => {
+                        if line.pop().is_some() {
+                            print!("\x08 \x08");
+                        }
+                    }
+
+                    c => {
+                        line.push(c);
+                        print!("{}", c);
+                    }
+                },
+
+                Key::Up => {
+                    if history_index > 0 {
+                        history_index -= 1;
+                    }
+
+                    let history = HISTORY.lock();
+
+                    if history_index < history.len() {
+                        for _ in 0..line.len() {
+                            print!("\x08 \x08");
+                        }
+
+                        line = history[history_index].clone();
+                        print!("{}", line);
+                    }
+                }
+
+                Key::Down => {
+                    let history = HISTORY.lock();
+
+                    if history.len() > 0 && history_index < history.len() - 1 {
+                        history_index += 1;
+                    } else {
+                        history_index = history.len();
+                    }
+
+                    for _ in 0..line.len() {
+                        print!("\x08 \x08");
+                    }
+
+                    if history_index < history.len() {
+                        line = history[history_index].clone();
+                        print!("{}", line);
+                    } else {
+                        line.clear();
+                    }
+                }
+
+                _ => {}
+            }
+        }
+    }
+}
 
 pub fn run_command(line: &str) {
     let mut args = line.split_whitespace();

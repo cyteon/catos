@@ -1,13 +1,16 @@
 use core::sync::atomic::Ordering;
 
 use lazy_static::lazy_static;
-use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1, layouts};
+use pc_keyboard::{DecodedKey, HandleControl, KeyCode, Keyboard, ScancodeSet1, layouts};
 use spin::mutex::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
-use crate::drivers::{
-    console::{RED, RESET},
-    io, pic, serial,
+use crate::{
+    drivers::{
+        console::{RED, RESET},
+        io, pic, serial,
+    },
+    lib::keys::Key,
 };
 
 lazy_static! {
@@ -85,8 +88,15 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
 
     if let Ok(Some(event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(event) {
-            if let pc_keyboard::DecodedKey::Unicode(char) = key {
-                super::keys::push_key(char);
+            match key {
+                DecodedKey::Unicode(char) => super::keys::push_key(Key::Char(char)),
+                DecodedKey::RawKey(key) => match key {
+                    KeyCode::ArrowUp => super::keys::push_key(Key::Up),
+                    KeyCode::ArrowDown => super::keys::push_key(Key::Down),
+                    KeyCode::ArrowLeft => super::keys::push_key(Key::Left),
+                    KeyCode::ArrowRight => super::keys::push_key(Key::Right),
+                    _ => {}
+                },
             }
         }
     }
@@ -99,9 +109,9 @@ extern "x86-interrupt" fn serial_in_handler(_frame: InterruptStackFrame) {
         let byte = io::inb(serial::COM1);
 
         match byte {
-            b'\r' => super::keys::push_key('\n'),
-            b'\x7f' => super::keys::push_key('\x08'),
-            _ => super::keys::push_key(byte as char),
+            b'\r' => super::keys::push_key(Key::Char('\n')),
+            b'\x7f' => super::keys::push_key(Key::Char('\x08')),
+            _ => super::keys::push_key(Key::Char(byte as char)),
         }
     }
 

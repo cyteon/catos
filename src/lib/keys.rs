@@ -2,31 +2,40 @@ use x86_64::instructions::interrupts::without_interrupts;
 
 const BUFFER_SIZE: usize = 256;
 
+#[derive(Copy, Clone)]
+pub enum Key {
+    Char(char),
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 struct KeyBuffer {
-    buffer: [char; BUFFER_SIZE],
+    buffer: [Key; 256],
     head: usize,
     tail: usize,
 }
 
 static mut KEYS: KeyBuffer = KeyBuffer {
-    buffer: ['\0'; BUFFER_SIZE],
+    buffer: [Key::Char('\0'); 256],
     head: 0,
     tail: 0,
 };
 
-pub fn push_key(char: char) {
+pub fn push_key(key: Key) {
     unsafe {
         let next = (KEYS.head + 1) % BUFFER_SIZE;
 
         if next != KEYS.tail {
             let index = KEYS.head;
-            KEYS.buffer[index] = char;
+            KEYS.buffer[index] = key;
             KEYS.head = next;
         }
     }
 }
 
-pub fn pop_key() -> Option<char> {
+pub fn pop_key() -> Option<Key> {
     without_interrupts(|| unsafe {
         if KEYS.tail == KEYS.head {
             None

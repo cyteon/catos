@@ -4,12 +4,9 @@
 
 extern crate alloc;
 
-use core::{
-    panic::PanicInfo,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use core::{panic::PanicInfo, sync::atomic::AtomicU64};
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use limine::{
     BaseRevision,
     memory_map::EntryType,
@@ -21,7 +18,7 @@ use limine::{
 
 use crate::{
     drivers::console::{GREEN, RED, RESET},
-    lib::{keys::pop_key, memory::STACK_TOP},
+    lib::memory::STACK_TOP,
 };
 
 #[used]
@@ -153,42 +150,7 @@ extern "C" fn main() -> ! {
     println!("[ {}OK{} ] boot complete", GREEN, RESET);
     println!("[ {}OK{} ] starting shell\n", GREEN, RESET);
 
-    let mut line = String::new();
-    print!("catos> ");
-
-    let mut last_blink = 0;
-
-    loop {
-        x86_64::instructions::hlt();
-
-        let ticks = TICKS.load(Ordering::Relaxed);
-        if ticks / ((drivers::pit::TICK_HZ as u64) / 2) != last_blink {
-            last_blink = ticks / ((drivers::pit::TICK_HZ as u64) / 2);
-            drivers::console::tick_cursor();
-        }
-
-        while let Some(char) = pop_key() {
-            match char {
-                '\n' => {
-                    println!();
-                    shell::run_command(&line);
-                    line.clear();
-                    print!("catos> ");
-                }
-
-                '\x08' => {
-                    if line.pop().is_some() {
-                        print!("\x08 \x08");
-                    }
-                }
-
-                c => {
-                    line.push(c);
-                    print!("{}", c);
-                }
-            }
-        }
-    }
+    shell::shell_loop();
 }
 
 #[panic_handler]
