@@ -2,7 +2,6 @@ use core::sync::atomic::Ordering;
 
 use alloc::{string::String, vec::Vec};
 use spin::mutex::Mutex;
-use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::{
     TICKS,
@@ -14,7 +13,7 @@ use crate::{
     lib::{
         fs, initrd,
         keys::{Key, pop_key},
-        tasks::TASKS,
+        tasks,
     },
     print, println,
 };
@@ -217,49 +216,15 @@ pub fn run_command(line: &str) {
             }
         }
 
-        "ps" => {
-            let tasks = TASKS.lock();
+        "ps" => tasks::with_tasks(|tasks| {
             for task in tasks.iter() {
                 println!(
                     "id={} name={} rsp={:#x} stack={:#x}..{:#x}",
                     task.id, task.name, task.rsp, task.stack_bottom, task.stack_top
                 );
             }
-        }
-
-        "switchtest" => {
-            let id = crate::lib::tasks::spawn_task("task_a", task_a);
-
-            let mut tasks = TASKS.lock();
-            let shell_rsp: *mut u64 = &mut tasks[0].rsp;
-            let task_a_rsp = tasks[id as usize].rsp;
-
-            drop(tasks);
-
-            without_interrupts(|| unsafe {
-                crate::lib::tasks::switch(&mut *shell_rsp, task_a_rsp);
-            });
-
-            println!("back in shell");
-        }
+        }),
 
         _ => println!("{}unknown command: {}{}", RED, command, RESET),
-    }
-}
-
-extern "C" fn task_a() -> ! {
-    println!("hi from task_a");
-
-    let mut tasks = TASKS.lock();
-    let task_a_rsp: *mut u64 = &mut tasks[1].rsp;
-    let shell_rsp = tasks[0].rsp;
-    drop(tasks);
-
-    without_interrupts(|| unsafe {
-        crate::lib::tasks::switch(&mut *task_a_rsp, shell_rsp);
-    });
-
-    loop {
-        x86_64::instructions::hlt();
     }
 }

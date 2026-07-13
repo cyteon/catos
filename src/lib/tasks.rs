@@ -1,8 +1,11 @@
+use core::sync::atomic::{AtomicUsize, Ordering};
+
 use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
 use spin::mutex::Mutex;
+use x86_64::instructions::interrupts::without_interrupts;
 
 use crate::lib::memory::{self, STACK_BOTTOM, STACK_TOP};
 
@@ -15,6 +18,8 @@ pub struct Task {
 }
 
 pub static TASKS: Mutex<Vec<Task>> = Mutex::new(Vec::new());
+
+pub static CURRENT: AtomicUsize = AtomicUsize::new(0);
 
 const TASK_STACK_REGION: u64 = 0xffff_b000_0000_0000;
 const TASK_SLOT_SIZE: u64 = 64 * 4096;
@@ -89,4 +94,29 @@ pub extern "C" fn switch(old_rsp: &mut u64, new_rsp: u64) {
         "pop rbp",
         "ret",
     );
+}
+
+pub fn with_tasks<R>(f: impl FnOnce(&mut Vec<Task>) -> R) -> R {
+    without_interrupts(|| f(&mut TASKS.lock()))
+}
+
+pub fn schedule() {
+    let mut tasks = TASKS.lock();
+    if tasks.len() < 2 {
+        return;
+    }
+
+    let current = CURRENT.load(Ordering::Relaxed);
+    let next = (current + 1) % tasks.len();
+
+    let old_rsp: *mut u64 = &mut tasks[current].rsp;
+    let new_rsp = tasks[next].rsp;
+
+    drop(tasks);
+
+    CURRENT.store(next, Ordering::Relaxed);
+
+    unsafe {
+        switch(&mut *old_rsp, new_rsp);
+    }
 }

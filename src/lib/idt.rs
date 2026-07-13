@@ -10,7 +10,7 @@ use crate::{
         console::{RED, RESET},
         io, pic, serial,
     },
-    lib::keys::Key,
+    lib::{keys::Key, tasks},
 };
 
 lazy_static! {
@@ -73,6 +73,8 @@ extern "x86-interrupt" fn page_fault_handler(
 extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
     crate::TICKS.fetch_add(1, Ordering::Relaxed);
     pic::end_of_interrupt(0);
+
+    tasks::schedule();
 }
 
 static KEYBOARD: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> = Mutex::new(Keyboard::new(
