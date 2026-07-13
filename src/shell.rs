@@ -248,3 +248,7 @@ extern "C" fn sleep_test() {
     tasks::sleep(5 * 1000);
     println!("task woke up");
 }
+
+unsafe extern "C" {
+    fn c_test() -> i32;
+}

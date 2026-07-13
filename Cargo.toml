@@ -24,3 +24,6 @@ x86_64 = "0.15.4"
 [dependencies.lazy_static]
 version = "1.5.0"
 features = ["spin_no_std"]
+
+[build-dependencies]
+cc = "1.2.67"
