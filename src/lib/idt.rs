@@ -1,16 +1,20 @@
 use core::sync::atomic::Ordering;
 
 use lazy_static::lazy_static;
-use pc_keyboard::{DecodedKey, HandleControl, KeyCode, Keyboard, ScancodeSet1, layouts};
+use pc_keyboard::{DecodedKey, HandleControl, KeyCode, KeyState, Keyboard, ScancodeSet1, layouts};
 use spin::mutex::Mutex;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 use crate::{
     drivers::{
         console::{RED, RESET},
-        io, pic, serial,
+        fb, io, pic, serial,
     },
-    lib::{keys::Key, tasks},
+    lib::{
+        keys::{self, Key},
+        rawkeys::{self, RawKey},
+        tasks,
+    },
 };
 
 lazy_static! {
@@ -89,16 +93,26 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     let mut keyboard = KEYBOARD.lock();
 
     if let Ok(Some(event)) = keyboard.add_byte(scancode) {
-        if let Some(key) = keyboard.process_keyevent(event) {
-            match key {
-                DecodedKey::Unicode(char) => super::keys::push_key(Key::Char(char)),
-                DecodedKey::RawKey(key) => match key {
-                    KeyCode::ArrowUp => super::keys::push_key(Key::Up),
-                    KeyCode::ArrowDown => super::keys::push_key(Key::Down),
-                    KeyCode::ArrowLeft => super::keys::push_key(Key::Left),
-                    KeyCode::ArrowRight => super::keys::push_key(Key::Right),
-                    _ => {}
-                },
+        if fb::OWNER.load(Ordering::Relaxed) != 0 {
+            let raw = match event.state {
+                KeyState::Down => RawKey::Press(event.code),
+                KeyState::Up => RawKey::Release(event.code),
+                KeyState::SingleShot => RawKey::Press(event.code),
+            };
+
+            rawkeys::push_raw(raw);
+        } else {
+            if let Some(key) = keyboard.process_keyevent(event) {
+                match key {
+                    DecodedKey::Unicode(char) => keys::push_key(Key::Char(char)),
+                    DecodedKey::RawKey(key) => match key {
+                        KeyCode::ArrowUp => keys::push_key(Key::Up),
+                        KeyCode::ArrowDown => keys::push_key(Key::Down),
+                        KeyCode::ArrowLeft => keys::push_key(Key::Left),
+                        KeyCode::ArrowRight => keys::push_key(Key::Right),
+                        _ => {}
+                    },
+                }
             }
         }
     }

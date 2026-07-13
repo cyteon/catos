@@ -1,7 +1,5 @@
 use x86_64::instructions::interrupts::without_interrupts;
 
-const BUFFER_SIZE: usize = 256;
-
 #[derive(Copy, Clone)]
 pub enum Key {
     Char(char),
@@ -25,7 +23,7 @@ static mut KEYS: KeyBuffer = KeyBuffer {
 
 pub fn push_key(key: Key) {
     unsafe {
-        let next = (KEYS.head + 1) % BUFFER_SIZE;
+        let next = (KEYS.head + 1) % 256;
 
         if next != KEYS.tail {
             let index = KEYS.head;
@@ -42,7 +40,7 @@ pub fn pop_key() -> Option<Key> {
         } else {
             let index = KEYS.tail;
             let char = KEYS.buffer[index];
-            KEYS.tail = (KEYS.tail + 1) % BUFFER_SIZE;
+            KEYS.tail = (KEYS.tail + 1) % 256;
             Some(char)
         }
     })

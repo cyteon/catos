@@ -135,6 +135,7 @@ pub fn run_command(line: &str) {
             println!("  ps                  - list running tasks");
             println!("  sleeptest           - sleeps for 5 seconds then prints");
             println!("  clear               - clear the console");
+            println!("  fbtest              - launch a tiny test game, controls are w/a/s/d/esc");
         }
 
         "echo" => {
@@ -232,6 +233,10 @@ pub fn run_command(line: &str) {
 
         "clear" => {
             drivers::console::clear();
+        }
+
+        "fbtest" => {
+            tasks::spawn_task("fbtest", crate::lib::fbtest::fbtest);
         }
 
         _ => println!("{}unknown command: {}{}", RED, command, RESET),

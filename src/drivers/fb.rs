@@ -32,8 +32,15 @@ pub fn info() -> &'static FbInfo {
     INFO.get().expect("framebuffer not initialized")
 }
 
-pub fn acquire(task_id: u64) {
-    let _ = OWNER.compare_exchange(0, task_id as usize, Ordering::Acquire, Ordering::Relaxed);
+pub fn acquire(task_id: u64) -> Option<&'static FbInfo> {
+    if OWNER
+        .compare_exchange(0, task_id as usize, Ordering::Acquire, Ordering::Relaxed)
+        .is_ok()
+    {
+        Some(INFO.get().expect("framebuffer not initialized"))
+    } else {
+        None
+    }
 }
 
 pub fn release_if_owner(task_id: u64) {
