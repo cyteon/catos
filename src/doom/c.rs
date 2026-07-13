@@ -1,8 +1,16 @@
-use alloc::alloc::{alloc, alloc_zeroed, dealloc};
+use alloc::{
+    alloc::{alloc, alloc_zeroed, dealloc},
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
 use core::{alloc::Layout, sync::atomic::Ordering};
 use x86_64::instructions::interrupts::without_interrupts;
 
-use crate::lib::tasks::{self, TaskState};
+use crate::lib::{
+    fs,
+    tasks::{self, TaskState},
+};
 
 #[unsafe(no_mangle)]
 pub static mut errno: i32 = 0;
@@ -404,13 +412,13 @@ pub extern "C" fn sscanf(_s: *const u8, _fmt: *const u8) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn _putchar(c: u8) {
-    crate::drivers::serial::_print(format_args!("{}", c as char));
+pub extern "C" fn _putchar(c: i32) {
+    crate::drivers::serial::_print(format_args!("{}", c as u8 as char));
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn putchar(c: i32) -> i32 {
-    _putchar(c as u8);
+    _putchar(c);
     c
 }
 
@@ -420,10 +428,10 @@ pub extern "C" fn puts(s: *const u8) -> i32 {
         let len = strlen(s);
 
         for i in 0..len {
-            _putchar(*s.add(i));
+            _putchar(*s.add(i) as i32);
         }
 
-        _putchar(b'\n');
+        _putchar(b'\n' as i32);
         0
     }
 }
@@ -441,5 +449,141 @@ pub extern "C" fn exit(_status: i32) -> ! {
         });
 
         x86_64::instructions::hlt();
+    }
+}
+
+#[repr(C)]
+pub struct FILE {
+    name: String,
+    data: Vec<u8>,
+    pos: usize,
+    write: bool,
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fopen(filename: *const u8, mode: *const u8) -> *mut FILE {
+    unsafe {
+        let name = strdup(filename);
+        if name.is_null() {
+            return core::ptr::null_mut();
+        }
+        let name = core::str::from_utf8_unchecked(core::slice::from_raw_parts(name, strlen(name)));
+
+        let mode = strdup(mode);
+        if mode.is_null() {
+            return core::ptr::null_mut();
+        }
+        let mode = core::str::from_utf8_unchecked(core::slice::from_raw_parts(mode, strlen(mode)));
+
+        let data = match fs::read(name) {
+            Some(data) => data,
+            None => return core::ptr::null_mut(),
+        };
+
+        Box::into_raw(Box::new(FILE {
+            name: name.to_string(),
+            data,
+            pos: 0,
+            write: mode.contains('w') || mode.contains('a'),
+        }))
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fread(ptr: *mut u8, size: usize, count: usize, file: *mut FILE) -> usize {
+    unsafe {
+        let file = &mut *file;
+
+        let bytes = size * count;
+        let remaining = file.data.len() - file.pos;
+        let amount = bytes.min(remaining);
+
+        core::ptr::copy_nonoverlapping(file.data.as_ptr().add(file.pos), ptr, amount);
+        file.pos += amount;
+
+        amount / size
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fwrite(
+    ptr: *const u8,
+    size: usize,
+    count: usize,
+    file: *mut FILE,
+) -> usize {
+    unsafe {
+        let file = &mut *file;
+
+        let bytes = size * count;
+        let src = core::slice::from_raw_parts(ptr, bytes);
+
+        if file.pos + bytes > file.data.len() {
+            file.data.resize(file.pos + bytes, 0);
+        }
+
+        file.data[file.pos..file.pos + bytes].copy_from_slice(src);
+        file.pos += bytes;
+
+        count
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ftell(file: *mut FILE) -> i64 {
+    unsafe {
+        let file = &mut *file;
+        file.pos as i64
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fseek(file: *mut FILE, offset: i64, whence: i32) -> i32 {
+    unsafe {
+        if file.is_null() {
+            return -1;
+        }
+
+        let file = &mut *file;
+
+        match whence {
+            0 => {
+                file.pos = offset.max(0) as usize;
+            }
+
+            1 => {
+                file.pos = (file.pos as i64 + offset).max(0) as usize;
+            }
+
+            2 => {
+                file.pos = (file.data.len() as i64 + offset).max(0) as usize;
+            }
+
+            _ => return -1,
+        }
+
+        0
+    }
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fflush(_file: *mut FILE) -> i32 {
+    -1
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn fclose(file: *mut FILE) -> i32 {
+    unsafe {
+        if file.is_null() {
+            return -1;
+        }
+
+        let file = Box::from_raw(file);
+
+        if file.write {
+            crate::lib::fs::write(&file.name, &file.data);
+        }
+
+        0
     }
 }
