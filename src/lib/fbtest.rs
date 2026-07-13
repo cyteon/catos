@@ -5,7 +5,7 @@ use core::sync::atomic::Ordering;
 use pc_keyboard::KeyCode;
 
 use crate::{
-    drivers::fb,
+    drivers::{console, fb},
     lib::{
         rawkeys::{self, RawKey},
         tasks::{self, CURRENT},
@@ -53,7 +53,22 @@ pub extern "C" fn fbtest() {
                 KeyCode::A => left = pressed,
                 KeyCode::D => right = pressed,
                 KeyCode::Escape => {
+                    for y in 0..fb.height {
+                        for x in 0..fb.width {
+                            let pixel_offset = y * fb.pitch + x * (fb.bpp / 8);
+                            unsafe {
+                                fb.addr
+                                    .add(pixel_offset)
+                                    .cast::<u32>()
+                                    .write_volatile(0x000000);
+                            }
+                        }
+                    }
+
                     fb::release_if_owner(task_id as u64);
+
+                    console::clear();
+
                     return;
                 }
                 _ => {}

@@ -1,5 +1,5 @@
 use core::{
-    fmt,
+    fmt::{self, Write},
     sync::atomic::{AtomicU32, Ordering},
 };
 
@@ -262,6 +262,7 @@ pub fn clear() {
 
         if let Some(c) = CONSOLE.lock().as_mut() {
             c.clear();
+            let _ = c.write_str("catos> ");
         }
     })
 }
