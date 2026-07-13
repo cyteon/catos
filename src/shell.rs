@@ -133,7 +133,7 @@ pub fn run_command(line: &str) {
             println!("  write <file> <text> - write <text> to <file> in the initrd");
             println!("  rm <file>           - remove <file> from the initrd");
             println!("  ps                  - list running tasks");
-            println!("  switchtest          - test task switching");
+            println!("  sleeptest           - sleeps for 5 seconds then prints");
         }
 
         "echo" => {
@@ -219,12 +219,22 @@ pub fn run_command(line: &str) {
         "ps" => tasks::with_tasks(|tasks| {
             for task in tasks.iter() {
                 println!(
-                    "id={} name={} rsp={:#x} stack={:#x}..{:#x}",
-                    task.id, task.name, task.rsp, task.stack_bottom, task.stack_top
+                    "id={} name={} state={:?} rsp={:#x} stack={:#x}..{:#x}",
+                    task.id, task.name, task.state, task.rsp, task.stack_bottom, task.stack_top
                 );
             }
         }),
 
+        "sleeptest" => {
+            tasks::spawn_task("sleeptest", sleep_test);
+        }
+
         _ => println!("{}unknown command: {}{}", RED, command, RESET),
     }
+}
+
+extern "C" fn sleep_test() {
+    println!("task sleeping");
+    tasks::sleep(5 * 1000);
+    println!("task woke up");
 }

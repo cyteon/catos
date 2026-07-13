@@ -7,7 +7,18 @@ use alloc::{
 use spin::mutex::Mutex;
 use x86_64::instructions::interrupts::without_interrupts;
 
-use crate::lib::memory::{self, STACK_BOTTOM, STACK_TOP};
+use crate::{
+    TICKS,
+    drivers::pit::TICK_HZ,
+    lib::memory::{self, STACK_BOTTOM, STACK_TOP},
+};
+
+#[derive(Debug)]
+pub enum TaskState {
+    Ready,
+    Blocked { until: u64 },
+    Dead,
+}
 
 pub struct Task {
     pub id: u64,
@@ -15,6 +26,7 @@ pub struct Task {
     pub rsp: u64,
     pub stack_bottom: u64,
     pub stack_top: u64,
+    pub state: TaskState,
 }
 
 pub static TASKS: Mutex<Vec<Task>> = Mutex::new(Vec::new());
@@ -32,6 +44,7 @@ pub fn init() {
         rsp: 0,
         stack_bottom: STACK_BOTTOM,
         stack_top: STACK_TOP,
+        state: TaskState::Ready,
     });
 }
 
@@ -39,40 +52,54 @@ fn slot_guard(id: u64) -> u64 {
     TASK_STACK_REGION + id * TASK_SLOT_SIZE
 }
 
-fn prepare_stack(top: u64, entry: extern "C" fn() -> !) -> u64 {
+fn prepare_stack(top: u64, entry: extern "C" fn()) -> u64 {
     unsafe {
         let mut stack = top as *mut u64;
-        stack = stack.offset(-1);
-        *stack = entry as u64;
+        *stack.sub(3) = task_exit as u64;
+        *stack.sub(4) = entry as u64;
 
-        for _ in 0..6 {
-            stack = stack.offset(-1);
-            *stack = 0;
+        for i in 5..=10 {
+            *stack.sub(i) = 0;
         }
 
-        stack as u64
+        stack.sub(10) as u64
     }
 }
 
-pub fn spawn_task(name: &str, entry: extern "C" fn() -> !) -> u64 {
-    let mut tasks = TASKS.lock();
+pub fn spawn_task(name: &str, entry: extern "C" fn()) -> u64 {
+    without_interrupts(|| {
+        let mut tasks = TASKS.lock();
 
-    let id = tasks.len() as u64;
-    let stack_bottom = slot_guard(id) + 4096;
-    memory::map_stack(stack_bottom, TASK_STACK_PAGES);
+        let id = tasks.len() as u64;
+        let stack_bottom = slot_guard(id) + 4096;
+        memory::map_stack(stack_bottom, TASK_STACK_PAGES);
 
-    let top = stack_bottom + TASK_STACK_PAGES * 4096;
-    let rsp = prepare_stack(top, entry);
+        let top = stack_bottom + TASK_STACK_PAGES * 4096;
+        let rsp = prepare_stack(top, entry);
 
-    tasks.push(Task {
-        id,
-        name: name.to_string(),
-        rsp,
-        stack_bottom,
-        stack_top: top,
+        tasks.push(Task {
+            id,
+            name: name.to_string(),
+            rsp,
+            stack_bottom,
+            stack_top: top,
+            state: TaskState::Ready,
+        });
+
+        id
+    })
+}
+
+extern "C" fn task_exit() -> ! {
+    with_tasks(|tasks| {
+        let current = CURRENT.load(Ordering::Relaxed);
+        tasks[current].state = TaskState::Dead;
     });
 
-    id
+    loop {
+        without_interrupts(|| schedule());
+        x86_64::instructions::hlt();
+    }
 }
 
 #[unsafe(naked)]
@@ -106,8 +133,35 @@ pub fn schedule() {
         return;
     }
 
+    let now = TICKS.load(Ordering::Relaxed);
     let current = CURRENT.load(Ordering::Relaxed);
-    let next = (current + 1) % tasks.len();
+
+    let mut next = None;
+
+    for i in 1..tasks.len() {
+        let i = (current + i) % tasks.len();
+
+        match tasks[i].state {
+            TaskState::Ready => {
+                next = Some(i);
+                break;
+            }
+
+            TaskState::Blocked { until } => {
+                if now >= until {
+                    tasks[i].state = TaskState::Ready;
+                    next = Some(i);
+                    break;
+                }
+            }
+
+            _ => {}
+        }
+    }
+
+    let Some(next) = next else {
+        return;
+    };
 
     let old_rsp: *mut u64 = &mut tasks[current].rsp;
     let new_rsp = tasks[next].rsp;
@@ -119,4 +173,17 @@ pub fn schedule() {
     unsafe {
         switch(&mut *old_rsp, new_rsp);
     }
+}
+
+pub fn sleep(ms: u64) {
+    without_interrupts(|| {
+        with_tasks(|tasks| {
+            let current = CURRENT.load(Ordering::Relaxed);
+            tasks[current].state = TaskState::Blocked {
+                until: TICKS.load(Ordering::Relaxed) + ms * TICK_HZ as u64 / 1000,
+            };
+        });
+
+        schedule();
+    })
 }
