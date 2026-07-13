@@ -1,3 +1,4 @@
+pub mod doom;
 pub mod fbtest;
 pub mod font;
 pub mod fs;

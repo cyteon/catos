@@ -122,6 +122,7 @@ pub fn run_command(line: &str) {
     match command {
         "help" => {
             println!("commands:");
+            println!("  doom                - launch doom");
             println!("  help                - show this help message");
             println!("  echo <text>         - print <text> to the console");
             println!("  uptime              - show how long the system has been running");
@@ -136,6 +137,11 @@ pub fn run_command(line: &str) {
             println!("  sleeptest           - sleeps for 5 seconds then prints");
             println!("  clear               - clear the console");
             println!("  fbtest              - launch a tiny test game, controls are w/a/s/d/esc");
+        }
+
+        "doom" => {
+            println!("launching doom...");
+            crate::doom::run();
         }
 
         "echo" => {

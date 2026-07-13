@@ -49,6 +49,7 @@ static _START: RequestsStartMarker = RequestsStartMarker::new();
 #[unsafe(link_section = ".requests_end_marker")]
 static _END: RequestsEndMarker = RequestsEndMarker::new();
 
+pub mod doom;
 pub mod drivers;
 pub mod lib;
 mod shell;
