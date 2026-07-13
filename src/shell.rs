@@ -134,6 +134,7 @@ pub fn run_command(line: &str) {
             println!("  rm <file>           - remove <file> from the initrd");
             println!("  ps                  - list running tasks");
             println!("  sleeptest           - sleeps for 5 seconds then prints");
+            println!("  clear               - clear the console");
         }
 
         "echo" => {
@@ -227,6 +228,10 @@ pub fn run_command(line: &str) {
 
         "sleeptest" => {
             tasks::spawn_task("sleeptest", sleep_test);
+        }
+
+        "clear" => {
+            drivers::console::clear();
         }
 
         _ => println!("{}unknown command: {}{}", RED, command, RESET),

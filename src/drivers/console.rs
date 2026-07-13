@@ -7,7 +7,10 @@ use limine::framebuffer::Framebuffer;
 use spin::Mutex;
 use x86_64::instructions::interrupts::without_interrupts;
 
-use crate::lib::font::{FONT, Font, parse_font};
+use crate::{
+    drivers::fb,
+    lib::font::{FONT, Font, parse_font},
+};
 
 enum Ansi {
     Normal,
@@ -16,10 +19,6 @@ enum Ansi {
 }
 
 pub struct Console {
-    addr: *mut u8,
-    pitch: usize,
-    width: usize,
-    height: usize,
     font: Font,
     col: usize,
     row: usize,
@@ -35,17 +34,21 @@ const MARGIN: usize = 8;
 
 impl Console {
     fn cols(&self) -> usize {
-        (self.width - MARGIN * 2) / self.font.width
+        (fb::info().width - MARGIN * 2) / self.font.width
     }
 
     fn rows(&self) -> usize {
-        (self.height - MARGIN * 2) / self.font.height
+        (fb::info().height - MARGIN * 2) / self.font.height
     }
 
     fn set_pixel(&mut self, x: usize, y: usize, color: u32) {
         unsafe {
-            let offset = y * self.pitch + x * 4;
-            self.addr.add(offset).cast::<u32>().write_volatile(color);
+            let offset = y * fb::info().pitch + x * 4;
+            fb::info()
+                .addr
+                .add(offset)
+                .cast::<u32>()
+                .write_volatile(color);
         }
     }
 
@@ -74,13 +77,17 @@ impl Console {
     }
 
     fn scroll(&mut self) {
-        let line = self.font.height * self.pitch;
-        let top = MARGIN * self.pitch;
-        let band = self.rows() * self.font.height * self.pitch;
+        let line = self.font.height * fb::info().pitch;
+        let top = MARGIN * fb::info().pitch;
+        let band = self.rows() * self.font.height * fb::info().pitch;
 
         unsafe {
-            core::ptr::copy(self.addr.add(top + line), self.addr.add(top), band - line);
-            core::ptr::write_bytes(self.addr.add(top + band - line), 0, line);
+            core::ptr::copy(
+                fb::info().addr.add(top + line),
+                fb::info().addr.add(top),
+                band - line,
+            );
+            core::ptr::write_bytes(fb::info().addr.add(top + band - line), 0, line);
         }
     }
 
@@ -162,11 +169,25 @@ impl Console {
             }
         }
     }
+
+    pub fn clear(&mut self) {
+        let info = fb::info();
+
+        unsafe {
+            core::ptr::write_bytes(info.addr, 0, info.height * info.pitch);
+        }
+
+        self.col = 0;
+        self.row = 0;
+        self.cursor_visible = false;
+        self.ansi = Ansi::Normal;
+        COLOR.store(0xFFFFFF, Ordering::Relaxed);
+    }
 }
 
 pub static CONSOLE: Mutex<Option<Console>> = Mutex::new(None);
 
-pub fn init(framebuffer: &Framebuffer) {
+pub fn init() {
     let font = parse_font();
 
     crate::println!(
@@ -178,10 +199,6 @@ pub fn init(framebuffer: &Framebuffer) {
     );
 
     *CONSOLE.lock() = Some(Console {
-        addr: framebuffer.addr(),
-        pitch: framebuffer.pitch() as usize,
-        width: framebuffer.width() as usize,
-        height: framebuffer.height() as usize,
         font: font,
         col: 0,
         row: 0,
@@ -226,9 +243,25 @@ impl fmt::Write for Console {
 
 pub fn tick_cursor() {
     without_interrupts(|| {
+        if fb::OWNER.load(Ordering::Relaxed) != 0 {
+            return;
+        }
+
         if let Some(c) = CONSOLE.lock().as_mut() {
             c.cursor_visible = !c.cursor_visible;
             c.draw_cursor(c.cursor_visible);
+        }
+    })
+}
+
+pub fn clear() {
+    without_interrupts(|| {
+        if fb::OWNER.load(Ordering::Relaxed) != 0 {
+            return;
+        }
+
+        if let Some(c) = CONSOLE.lock().as_mut() {
+            c.clear();
         }
     })
 }
@@ -238,6 +271,10 @@ pub fn _print(args: fmt::Arguments) {
         use fmt::Write;
 
         super::serial::_print(args);
+
+        if fb::OWNER.load(Ordering::Relaxed) != 0 {
+            return;
+        }
 
         if let Some(c) = CONSOLE.lock().as_mut() {
             let _ = c.write_fmt(args);

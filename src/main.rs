@@ -78,7 +78,10 @@ pub extern "C" fn _start() -> ! {
         framebuffer.bpp()
     );
 
-    drivers::console::init(&framebuffer);
+    drivers::fb::init(framebuffer);
+    println!("[ {}OK{} ] framebuffer initialized", GREEN, RESET);
+
+    drivers::console::init();
     println!("[ {}OK{} ] console driver initialized", GREEN, RESET);
 
     println!("[ {}OK{} ] initalizing heap", GREEN, RESET);
