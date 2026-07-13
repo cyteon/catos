@@ -4,7 +4,7 @@ use alloc::{
 };
 use spin::mutex::Mutex;
 
-use crate::lib::memory::{STACK_BOTTOM, STACK_TOP};
+use crate::lib::memory::{self, STACK_BOTTOM, STACK_TOP};
 
 pub struct Task {
     pub id: u64,
@@ -28,4 +28,65 @@ pub fn init() {
         stack_bottom: STACK_BOTTOM,
         stack_top: STACK_TOP,
     });
+}
+
+fn slot_guard(id: u64) -> u64 {
+    TASK_STACK_REGION + id * TASK_SLOT_SIZE
+}
+
+fn prepare_stack(top: u64, entry: extern "C" fn() -> !) -> u64 {
+    unsafe {
+        let mut stack = top as *mut u64;
+        stack = stack.offset(-1);
+        *stack = entry as u64;
+
+        for _ in 0..6 {
+            stack = stack.offset(-1);
+            *stack = 0;
+        }
+
+        stack as u64
+    }
+}
+
+pub fn spawn_task(name: &str, entry: extern "C" fn() -> !) -> u64 {
+    let mut tasks = TASKS.lock();
+
+    let id = tasks.len() as u64;
+    let stack_bottom = slot_guard(id) + 4096;
+    memory::map_stack(stack_bottom, TASK_STACK_PAGES);
+
+    let top = stack_bottom + TASK_STACK_PAGES * 4096;
+    let rsp = prepare_stack(top, entry);
+
+    tasks.push(Task {
+        id,
+        name: name.to_string(),
+        rsp,
+        stack_bottom,
+        stack_top: top,
+    });
+
+    id
+}
+
+#[unsafe(naked)]
+pub extern "C" fn switch(old_rsp: &mut u64, new_rsp: u64) {
+    core::arch::naked_asm!(
+        "push rbp",
+        "push rbx",
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
+        "mov [rdi], rsp",
+        "mov rsp, rsi",
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop rbx",
+        "pop rbp",
+        "ret",
+    );
 }

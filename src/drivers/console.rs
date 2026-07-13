@@ -113,6 +113,12 @@ impl Console {
 
             '\x08' => self.backspace(),
 
+            '\t' => {
+                for _ in 0..4 {
+                    self.put_char(' ');
+                }
+            }
+
             _ => {
                 if self.col >= self.cols() {
                     self.newline();
