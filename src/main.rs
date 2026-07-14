@@ -17,7 +17,10 @@ use limine::{
 };
 
 use crate::{
-    drivers::console::{GREEN, RED, RESET},
+    drivers::{
+        console::{GREEN, RED, RESET},
+        fb,
+    },
     lib::memory::STACK_TOP,
 };
 
@@ -166,6 +169,8 @@ extern "C" fn main() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    fb::force_console();
+
     if let Some(location) = _info.location() {
         println!("\n[ {}PANIC{} ] panicked at {}", RED, RESET, location);
     } else {

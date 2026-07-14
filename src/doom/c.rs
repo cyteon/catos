@@ -475,9 +475,18 @@ pub unsafe extern "C" fn fopen(filename: *const u8, mode: *const u8) -> *mut FIL
         }
         let mode = core::str::from_utf8_unchecked(core::slice::from_raw_parts(mode, strlen(mode)));
 
+        crate::println!("fopen {} with mode {}", name, mode);
+
         let data = match fs::read(name) {
             Some(data) => data,
-            None => return core::ptr::null_mut(),
+            None => {
+                if mode.contains('w') || mode.contains('a') {
+                    Vec::new()
+                } else {
+                    crate::println!("fopen {} failed to read file", name);
+                    return core::ptr::null_mut();
+                }
+            }
         };
 
         crate::println!("fopen {}: {} bytes", name, data.len());
@@ -581,8 +590,6 @@ pub unsafe extern "C" fn fclose(file: *mut FILE) -> i32 {
         }
 
         let file = Box::from_raw(file);
-
-        crate::println!("fclose {}", file.name);
 
         if file.write {
             crate::lib::fs::write(&file.name, &file.data);

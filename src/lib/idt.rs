@@ -42,6 +42,8 @@ pub fn init() {
 }
 
 extern "x86-interrupt" fn breakpoint_handler(stack_frame: InterruptStackFrame) {
+    fb::force_console();
+
     crate::println!("\n[ {}BREAKPOINT{} ]", RED, RESET);
     crate::println!("{:#?}\n", stack_frame);
 }
@@ -50,6 +52,8 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: u64,
 ) -> ! {
+    fb::force_console();
+
     crate::println!(
         "\n[ {}DOUBLE FAULT{} ] error code: {}",
         RED,
@@ -66,6 +70,7 @@ extern "x86-interrupt" fn page_fault_handler(
     error_code: PageFaultErrorCode,
 ) {
     use x86_64::registers::control::Cr2;
+    fb::force_console();
 
     crate::println!("\n[ {}PAGE FAULT{} ] at {:?}", RED, RESET, Cr2::read());
     crate::println!("error code: {:?}", error_code);

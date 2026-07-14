@@ -46,3 +46,7 @@ pub fn acquire(task_id: u64) -> Option<&'static FbInfo> {
 pub fn release_if_owner(task_id: u64) {
     let _ = OWNER.compare_exchange(task_id as usize, 0, Ordering::Release, Ordering::Relaxed);
 }
+
+pub fn force_console() {
+    OWNER.store(0, Ordering::Release);
+}
