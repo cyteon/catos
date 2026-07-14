@@ -85,6 +85,9 @@ pub extern "C" fn _start() -> ! {
     drivers::console::init();
     println!("[ {}OK{} ] console driver initialized", GREEN, RESET);
 
+    lib::sse::enable();
+    println!("[ {}OK{} ] sse enabled", GREEN, RESET);
+
     println!("[ {}OK{} ] initalizing heap", GREEN, RESET);
 
     let hhdm = HHDM.get_response().expect("no hhdm").offset();

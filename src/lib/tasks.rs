@@ -46,6 +46,15 @@ pub fn init() {
         stack_top: STACK_TOP,
         state: TaskState::Ready,
     });
+
+    spawn_task("idle", idle_task);
+}
+
+extern "C" fn idle_task() {
+    loop {
+        x86_64::instructions::interrupts::enable();
+        x86_64::instructions::hlt();
+    }
 }
 
 fn slot_guard(id: u64) -> u64 {
@@ -54,7 +63,7 @@ fn slot_guard(id: u64) -> u64 {
 
 fn prepare_stack(top: u64, entry: extern "C" fn()) -> u64 {
     unsafe {
-        let mut stack = top as *mut u64;
+        let stack = top as *mut u64;
         *stack.sub(3) = task_exit as u64;
         *stack.sub(4) = entry as u64;
 
@@ -141,6 +150,11 @@ pub fn schedule() {
     for i in 1..tasks.len() {
         let i = (current + i) % tasks.len();
 
+        // skip idle task unless needed
+        if i == 1 {
+            continue;
+        }
+
         match tasks[i].state {
             TaskState::Ready => {
                 next = Some(i);
@@ -159,8 +173,15 @@ pub fn schedule() {
         }
     }
 
-    let Some(next) = next else {
-        return;
+    let next = match next {
+        Some(i) => i,
+        None => {
+            if matches!(tasks[current].state, TaskState::Ready) {
+                return;
+            } else {
+                1
+            }
+        }
     };
 
     let old_rsp: *mut u64 = &mut tasks[current].rsp;
@@ -206,6 +227,8 @@ pub fn wake(id: usize) {
     without_interrupts(|| {
         with_tasks(|tasks| {
             tasks[id].state = TaskState::Ready;
-        })
+        });
+
+        schedule();
     })
 }

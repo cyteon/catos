@@ -7,4 +7,5 @@ pub mod initrd;
 pub mod keys;
 pub mod memory;
 pub mod rawkeys;
+pub mod sse;
 pub mod tasks;
