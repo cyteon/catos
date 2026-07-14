@@ -187,3 +187,25 @@ pub fn sleep(ms: u64) {
         schedule();
     })
 }
+
+pub fn yield_now() {
+    without_interrupts(|| schedule());
+}
+
+pub fn block_task(id: usize) {
+    without_interrupts(|| {
+        let mut tasks = TASKS.lock();
+        tasks[id].state = TaskState::Blocked { until: u64::MAX };
+        drop(tasks);
+
+        schedule();
+    })
+}
+
+pub fn wake(id: usize) {
+    without_interrupts(|| {
+        with_tasks(|tasks| {
+            tasks[id].state = TaskState::Ready;
+        })
+    })
+}

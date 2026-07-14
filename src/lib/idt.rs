@@ -113,6 +113,8 @@ extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
                         _ => {}
                     },
                 }
+
+                tasks::wake(0);
             }
         }
     }
@@ -129,6 +131,8 @@ extern "x86-interrupt" fn serial_in_handler(_frame: InterruptStackFrame) {
             b'\x7f' => super::keys::push_key(Key::Char('\x08')),
             _ => super::keys::push_key(Key::Char(byte as char)),
         }
+
+        tasks::wake(0);
     }
 
     pic::end_of_interrupt(4);

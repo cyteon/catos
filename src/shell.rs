@@ -111,6 +111,8 @@ pub fn shell_loop() -> ! {
                 _ => {}
             }
         }
+
+        tasks::block_task(0);
     }
 }
 

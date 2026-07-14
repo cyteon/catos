@@ -8,6 +8,7 @@ use alloc::{ffi::CString, vec};
 use pc_keyboard::KeyCode;
 
 use crate::drivers::fb::FbInfo;
+use crate::drivers::pit::TICK_HZ;
 use crate::lib::rawkeys::{RawKey, pop_raw};
 use crate::lib::tasks;
 
@@ -69,7 +70,7 @@ pub extern "C" fn DG_SleepMs(ms: u32) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn DG_GetTicksMs() -> u32 {
-    crate::TICKS.load(Ordering::Relaxed) as u32 * 10
+    crate::TICKS.load(Ordering::Relaxed) as u32 * (1000 / TICK_HZ)
 }
 
 fn doom_key(code: KeyCode) -> Option<u8> {
@@ -124,6 +125,8 @@ pub extern "C" fn DG_GetKey(pressed: *mut c_int, key: *mut u8) -> c_int {
 pub extern "C" fn DG_SetWindowTitle(title: *const c_char) {}
 
 pub extern "C" fn run() {
+    x86_64::instructions::interrupts::enable();
+
     let task_id = tasks::CURRENT.load(Ordering::Relaxed);
 
     let Some(fb) = crate::drivers::fb::acquire(task_id as u64) else {

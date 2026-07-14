@@ -13,10 +13,12 @@ use crate::{
 };
 
 pub extern "C" fn fbtest() {
+    x86_64::instructions::interrupts::enable();
+
     let task_id = CURRENT.load(Ordering::Relaxed);
 
     let Some(fb) = fb::acquire(task_id as u64) else {
-        crate::println!("Task {} failed to acquire framebuffer", task_id);
+        crate::println!("fbtest failed to acquire framebuffer");
         return;
     };
 
