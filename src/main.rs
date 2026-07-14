@@ -169,6 +169,7 @@ extern "C" fn main() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    x86_64::instructions::interrupts::disable();
     fb::force_console();
 
     if let Some(location) = _info.location() {
