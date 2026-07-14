@@ -1,6 +1,6 @@
 # CatOS
 
-A small AMD64 kernel written in Rust. It uses limine as a bootloader and is a 64-bit OS. \
+A small AMD64 OS that can run doom. It uses limine as a bootloader and is a 64-bit OS. \
 It has a shell with basic commands, and a read+write ram filesystem which is initialized from initrd.
 
 For testing qemu is primarily used, and "cargo run" will set up limine stuff, make the iso and run it in qemu. \
