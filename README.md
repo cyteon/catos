@@ -1,12 +1,12 @@
 # CatOS
 
-A small AMD64 OS that can run doom. It uses limine as a bootloader and is a 64-bit OS. \
+A small AMD64 OS that can run doom. It uses limine as the bootloader and is a 64-bit OS. \
 It has a shell with basic commands, and a read+write ram filesystem which is initialized from initrd.
 
 For testing qemu is primarily used, and "cargo run" will set up limine stuff, make the iso and run it in qemu. \
 But the ISO has been tested on real hardware and does boot.
 
-<img width="554" height="561" alt="image" src="https://github.com/user-attachments/assets/2f9f98de-bc46-4a69-ab66-2b6239f1875f" />
+<img width="600" height="554" alt="image" src="https://github.com/user-attachments/assets/c057d69c-ba13-4e67-95f7-34c789276d9f" />
 
 ## Building
 
